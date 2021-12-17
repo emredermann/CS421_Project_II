@@ -168,7 +168,7 @@ def create_connection(url, data_size, counter):
     #         print(str(counter) + " " + f"{url}") + f"(size={content_length}) is not downloaded"
     #     else:
     #         with open(url[url.rfind('/') + 1:], 'wb') as file:
-    #             bytes_recd = 0
+    #             bytes_recd = 0d
     #             flag = 0
     #             internal_socket.close()
     #             internal_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
