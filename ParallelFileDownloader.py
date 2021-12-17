@@ -186,6 +186,5 @@ def create_connection(url, data_size, counter):
     #                 bytes_recd = bytes_recd + 1
     #             print(str(counter) + " " + url + " " + local_range_header + " is downloaded")
 
-
 s.close()
 print('Connection was closed.')
