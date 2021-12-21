@@ -12,7 +12,7 @@ Subject : Socket Programming
 import socket
 import sys
 import threading
-import os
+
 
 def get_size_of_file(url):
     try:
@@ -60,7 +60,24 @@ def get_size_of_file(url):
 
 
 def create_connection(url, data_size):
-    pass
+
+    internal_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_hostIP = socket.gethostbyname(url[:url.find("/")])
+    internal_socket.connect((server_hostIP, server_port))
+    range_header = f"Range: bytes = 0-{data_size}"
+    msg = get_request_msg(url, request_type="GET", custom_header=range_header)
+    internal_socket.sendall(msg.encode())
+    resp = internal_socket.recv(BUFFER_SIZE)
+    data = resp.decode()
+    response1 = data.split("\n")
+
+    for i in range(0, len(response1)):
+        temp = (response1[i].split(" "))
+        if temp[0].find('\nContent-Length:') != -1:
+             data_size = int(temp[1])
+    with open(url[url.rfind('/') + 1:], 'wb') as file:
+              file.write(resp)
+    print(url + " " + str(data_size) + " is downloaded")
 
 
     # if not range_is_given:
