@@ -11,84 +11,25 @@ Subject : Socket Programming
 
 import socket
 import sys
+import threading
 import os
-
-
-def get_request_msg(target_download_url: str, request_type="GET", custom_header=""):
-
-    msg = f'{request_type} /{target_download_url[target_download_url.find("/"):]} HTTP/1.1\r\nHost:%s\r\n\r\n' % target_download_url[
-                                                                                                                 :target_download_url.find(
-                                                                                                                     "/")]
-    if custom_header != "":
-        msg += custom_header + '\r\n'
-        msg += '\r\n'
-    return msg
-
-
-print('Program has been started ...')
-
-arguments = sys.argv
-arguments = arguments[1:]
-range_is_given = False
-
-target_url = arguments[0]
-connection_counter = arguments[1]
-
-print(f"URL of the index file: {target_url}")
-file_name = target_url[target_url.rfind("/") + 1:]
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-server_hostIP = socket.gethostbyname(target_url[:target_url.find("/")])
-
-server_port = 80
-BUFFER_SIZE = 100000
-
-# Connect to the server
-s.connect((server_hostIP, server_port))
-
-print(f'Connected to {server_hostIP} on {server_port} port.')
-
-# Make a GET request
-# Get  and save it to
-
-msg = get_request_msg(target_url, request_type="GET")
-msg = get_request_msg(target_url, request_type="GET")
-print('Sending request...')
-try:
-    s.sendall(msg.encode())
-    response = s.recv(BUFFER_SIZE)
-    response1 = response.decode()
-    url_list = response1.split("\n")
-    # Must be dynamic in order to sustanibility.
-    for r in range(1, len(url_list)):
-        if url_list[r] == 'HTTP/1.1 400 Bad Request\r':
-            end = r
-
-    url_list = url_list[url_list.index('\r') + 1:url_list.index('')]
-except:
-    print(f"{target_url} could not founded ...")
-    print("Program will exit.")
-    sys.exit(1)
-
-print(f"There are {len(url_list)} files in the index. ")
-counter = 0
-
 
 def get_size_of_file(url):
     try:
-        internal_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server_hostIP = socket.gethostbyname(url[:url.find("/")])
-        internal_socket.connect((server_hostIP, server_port))
+        internal_socket_get_size_of_file = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        hostIP_get_size_of_file = socket.gethostbyname(url[:url.find("/")])
+        internal_socket_get_size_of_file.connect((hostIP_get_size_of_file, server_port))
     except:
         print("Connection error in file {}".format(url))
         return
     connection_message = get_request_msg(url, request_type="HEAD")
-    internal_socket.sendall(connection_message.encode())
-    response_internal = internal_socket.recv(BUFFER_SIZE)
-    response_internal = response_internal.decode()
-    splitted = response_internal.split("\r")
+    internal_socket_get_size_of_file.sendall(connection_message.encode())
+    response_internal_get_size_of_file = internal_socket_get_size_of_file.recv(BUFFER_SIZE)
+    response_internal_get_size_of_file = response_internal_get_size_of_file.decode()
+    splitted = response_internal_get_size_of_file.split("\r")
     if splitted[0] == ('HTTP/1.1 404 Not Found'):
-        print(str(counter) + " " + f"{url}  not found...")
+        print(f"{url}  not found...")
+        internal_socket_get_size_of_file.close()
     else:
         # File exist in server.
         # In order to get content length.
@@ -97,28 +38,30 @@ def get_size_of_file(url):
             temp = (splitted[i].split(" "))
             if temp[0].find('\nContent-Length:') != -1:
                 content_length = int(temp[1])
+                internal_socket_get_size_of_file.close()
                 break
             if splitted[0] == ('HTTP/1.1 404 Not Found'):
-                print(str(counter) + " " + f"{url}  not found...")
+                print(f"{url}  not found...")
             else:
                 # File exist in server.
                 # In order to get content length.
                 if len(splitted) > 4:
-                    content_length = -1
                     for i in range(0, len(splitted)):
                         temp = (splitted[i].split(" "))
                         if temp[0].find('\nContent-Length:') != -1:
                             content_length = int(temp[1])
+                            internal_socket_get_size_of_file.close()
                             break
-                    if (content_length % connection_counter == 0):
+                    if content_length % connection_counter == 0:
+                        internal_socket_get_size_of_file.close()
                         return content_length
-    internal_socket.close()
+        internal_socket_get_size_of_file.close()
+        return -1
 
 
-def create_connection(url, data_size, counter):
-    counter += 1
-    # GETS content_length
-    # No range usage.
+def create_connection(url, data_size):
+    pass
+
 
     # if not range_is_given:
     #     internal_socket.close()
@@ -185,6 +128,87 @@ def create_connection(url, data_size, counter):
     #                         flag = 1
     #                 bytes_recd = bytes_recd + 1
     #             print(str(counter) + " " + url + " " + local_range_header + " is downloaded")
+def get_request_msg(target_download_url: str, request_type="GET", custom_header=""):
+
+    msg = f'{request_type} /{target_download_url[target_download_url.find("/"):]} HTTP/1.1\r\nHost:%s\r\n\r\n' % target_download_url[
+                                                                                                                 :target_download_url.find(
+                                                                                                                     "/")]
+    if custom_header != "":
+        msg += custom_header + '\r\n'
+        msg += '\r\n'
+    return msg
+
+
+print('Program has been started ...')
+
+arguments = sys.argv
+arguments = arguments[1:]
+range_is_given = False
+
+target_url = arguments[0]
+connection_counter = arguments[1]
+
+print(f"URL of the index file: {target_url}")
+file_name = target_url[target_url.rfind("/") + 1:]
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+server_hostIP = socket.gethostbyname(target_url[:target_url.find("/")])
+
+server_port = 80
+BUFFER_SIZE = 100000
+
+# Connect to the server
+s.connect((server_hostIP, server_port))
+
+print(f'Connected to {server_hostIP} on {server_port} port.')
+
+# Make a GET request
+# Get  and save it to
+
+msg = get_request_msg(target_url, request_type="GET")
+print('Sending request...')
+try:
+    s.sendall(msg.encode())
+    response = s.recv(BUFFER_SIZE)
+    response1 = response.decode()
+    url_list = response1.split("\n")
+    # Must be dynamic in order to sustanibility.
+    for r in range(1, len(url_list)):
+        if url_list[r] == 'HTTP/1.1 400 Bad Request\r':
+            end = r
+
+    url_list = url_list[url_list.index('\r') + 1:url_list.index('')]
+except:
+    print(f"{target_url} could not founded ...")
+    print("Program will exit.")
+    sys.exit(1)
+
+print(f"There are {len(url_list)} files in the index. ")
+
+threads = []
+for x in url_list:
+    # Head request in order to check file existence.
+    internal_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    hostIP = socket.gethostbyname(x[:x.find("/")])
+    internal_socket.connect((hostIP, server_port))
+    connection_message = get_request_msg(x, request_type="HEAD")
+    internal_socket.sendall(connection_message.encode())
+    response_internal = internal_socket.recv(BUFFER_SIZE)
+    response_internal = response_internal.decode()
+    splitted = response_internal.split("\r")
+    if splitted[0] == ('HTTP/1.1 404 Not Found'):
+        print(f"{x}  not found...")
+    else:
+        file_size = get_size_of_file(x)
+        if file_size == -1:
+            print("File size is -1 system is going to exit.")
+        else:
+            t = threading.Thread(target=create_connection, args=[x, file_size])
+            t.start()
+            threads.append(t)
+            for thread in threads:
+                thread.join()
+
 
 s.close()
 print('Connection was closed.')
