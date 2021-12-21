@@ -14,6 +14,9 @@ import sys
 import threading
 
 
+
+
+
 def get_size_of_file(url):
     try:
         internal_socket_get_size_of_file = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -77,72 +80,7 @@ def create_connection(url, last_readed_byte ,data_capacity_of_each_thread):
              data_size = int(temp[1])
     with open(url[url.rfind('/') + 1:], 'wb') as file:
               file.write(resp)
-    print(url + " " + str(data_size) + " is downloaded")
-    # if not range_is_given:
-    #     internal_socket.close()
-    #     internal_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    #     server_hostIP = socket.gethostbyname(url[:url.find("/")])
-    #     internal_socket.connect((server_hostIP, server_port))
-    #     range_header = f"Range: bytes = 0-{content_length}"
-    #     msg = get_request_msg(url, request_type="GET", custom_header=range_header)
-    #     internal_socket.sendall(msg.encode())
-    #     resp = internal_socket.recv(BUFFER_SIZE)
-    #     data = resp.decode()
-    #     response1 = data.split("\n")
-    #
-    #     for i in range(0, len(response1)):
-    #         temp = (response1[i].split(" "))
-    #         if temp[0].find('\nContent-Length:') != -1:
-    #             content_length = int(temp[1])
-    #
-    #     if response1[0] == 'HTTP/1.1 404 Not Found\r\n':
-    #         print(str(counter) + " " + f"{url}" + f"(size={content_length}) is not downloaded")
-    #     else:
-    #         with open(url[url.rfind('/') + 1:], 'wb') as file:
-    #             file.write(resp)
-    #         print(str(counter) + " " + url + " " + str(content_length) + " is downloaded")
-    # elif int(lower_endpoint) > content_length:
-    #     print(str(counter) + f" {url}" + f"(size={content_length}) is not downloaded")
-    #
-    #     # Range is given and  satify requirements
-    # elif int(lower_endpoint) <= int(content_length):
-    #     internal_socket.close()
-    #     internal_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    #     server_hostIP = socket.gethostbyname(url[:url.find("/")])
-    #     internal_socket.connect((server_hostIP, server_port))
-    #     local_range_header = f"Range:bytes={lower_endpoint}-{upper_endpoint}"
-    #
-    #     msg = get_request_msg(url, request_type="GET", custom_header=local_range_header)
-    #     internal_socket.sendall(msg.encode())
-    #     resp = internal_socket.recv(content_length)
-    #     data = resp.decode()
-    #     resp1 = data.split("\n")
-    #     for i in range(0, len(resp1)):
-    #         temp = (resp1[i].split(" "))
-    #         if temp[0].find('\nContent-Length:') != -1:
-    #             content_length = int(temp[1])
-    #
-    #     if resp1[0] == 'HTTP/1.1 404 Not Found\r':
-    #         print(str(counter) + " " + f"{url}") + f"(size={content_length}) is not downloaded"
-    #     else:
-    #         with open(url[url.rfind('/') + 1:], 'wb') as file:
-    #             bytes_recd = 0d
-    #             flag = 0
-    #             internal_socket.close()
-    #             internal_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    #             server_hostIP = socket.gethostbyname(url[:url.find("/")])
-    #             internal_socket.connect((server_hostIP, server_port))
-    #             msg = get_request_msg(url, request_type="GET", custom_header=local_range_header)
-    #             while bytes_recd < min(upper_endpoint, int(content_length)) and flag == 0:
-    #                 if lower_endpoint < bytes_recd < upper_endpoint:
-    #                     internal_socket.sendall(msg.encode())
-    #                     chunk = internal_socket.recv(1)
-    #                     if chunk != b'':
-    #                         file.write(chunk)
-    #                     else:
-    #                         flag = 1
-    #                 bytes_recd = bytes_recd + 1
-    #             print(str(counter) + " " + url + " " + local_range_header + " is downloaded")
+    print(url + " " + str(last_readed_byte)+"-"+str(data_capacity_of_each_thread) + "is downloaded.")
 
 def get_request_msg(target_download_url: str, request_type="GET", custom_header=""):
     msg = f'{request_type} /{target_download_url[target_download_url.find("/"):]} HTTP/1.1\r\nHost:%s\r\n\r\n' % target_download_url[
@@ -153,9 +91,11 @@ def get_request_msg(target_download_url: str, request_type="GET", custom_header=
         msg += '\r\n'
     return msg
 
-def createNewDownloadThread(link, data_capacity_of_each_thread):
-    download_thread = threading.Thread(target=create_connection, args=(link,data_capacity_of_each_thread))
+def createNewDownloadThread(link,last_readed_byte, data_capacity_of_each_thread):
+    download_thread = threading.Thread(target=create_connection, args=(link,last_readed_byte,data_capacity_of_each_thread))
     download_thread.start()
+    print(f"--------------------------{link}-------------------------")
+
 
 print('Program has been started ...')
 
@@ -164,7 +104,7 @@ arguments = arguments[1:]
 range_is_given = False
 
 target_url = arguments[0]
-thread_counter = arguments[1]
+thread_counter = int(arguments[1])
 
 print(f"URL of the index file: {target_url}")
 file_name = target_url[target_url.rfind("/") + 1:]
@@ -215,6 +155,9 @@ Otherwise, ((n/k)+1) bytes should be downloaded through the first (n−(n/k)*k) 
     and ⌊n/k⌋ bytes should be downloaded through the remaining connections.
 """
 for x in url_list:
+    print()
+    print()
+    print()
     # Head request in order to check file existence.
     internal_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     hostIP = socket.gethostbyname(x[:x.find("/")])
@@ -231,8 +174,9 @@ for x in url_list:
         if file_size % thread_counter == 0:
             data_capacity_of_each_thread = file_size / thread_counter
             last_readed_byte = 0
-            for x in range(thread_counter):
+            for y in range(thread_counter):
                 createNewDownloadThread( x, last_readed_byte,data_capacity_of_each_thread)
+                # create_connection(x,last_readed_byte,data_capacity_of_each_thread)
                 last_readed_byte += data_capacity_of_each_thread
 
             # Read data from a file in a multithreaded way.
@@ -246,12 +190,13 @@ for x in url_list:
             # As default downloader for each thread
             data_capacity_of_each_thread = 1
 
-            for x in range(thread_counter):
-                if x < file_size - ((file_size / thread_counter) * thread_counter):
+            for y in range(thread_counter):
+                if y < file_size - ((file_size / thread_counter) * thread_counter):
                     data_capacity_of_each_thread = file_size / thread_counter + 1
                 else:
                     data_capacity_of_each_thread = file_size / thread_counter
                 createNewDownloadThread(x, last_readed_byte, data_capacity_of_each_thread)
+                # create_connection(x,last_readed_byte,data_capacity_of_each_thread)
                 last_readed_byte += data_capacity_of_each_thread
 
 
