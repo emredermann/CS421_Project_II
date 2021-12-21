@@ -50,21 +50,21 @@ def get_size_of_file(url):
                         temp = (splitted[i].split(" "))
                         if temp[0].find('\nContent-Length:') != -1:
                             content_length = int(temp[1])
+
                             internal_socket_get_size_of_file.close()
-                            break
-                    if content_length % connection_counter == 0:
-                        internal_socket_get_size_of_file.close()
-                        return content_length
+                            return content_length
+                    # if content_length % thread_counter == 0:
+                    #     internal_socket_get_size_of_file.close()
+                    #     return content_length
         internal_socket_get_size_of_file.close()
         return -1
 
 
-def create_connection(url, data_size):
-
+def create_connection(url, last_readed_byte ,data_capacity_of_each_thread):
     internal_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_hostIP = socket.gethostbyname(url[:url.find("/")])
     internal_socket.connect((server_hostIP, server_port))
-    range_header = f"Range: bytes = 0-{data_size}"
+    range_header = f"Range: bytes = {last_readed_byte}-{data_capacity_of_each_thread}"
     msg = get_request_msg(url, request_type="GET", custom_header=range_header)
     internal_socket.sendall(msg.encode())
     resp = internal_socket.recv(BUFFER_SIZE)
@@ -78,8 +78,6 @@ def create_connection(url, data_size):
     with open(url[url.rfind('/') + 1:], 'wb') as file:
               file.write(resp)
     print(url + " " + str(data_size) + " is downloaded")
-
-
     # if not range_is_given:
     #     internal_socket.close()
     #     internal_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -145,8 +143,8 @@ def create_connection(url, data_size):
     #                         flag = 1
     #                 bytes_recd = bytes_recd + 1
     #             print(str(counter) + " " + url + " " + local_range_header + " is downloaded")
-def get_request_msg(target_download_url: str, request_type="GET", custom_header=""):
 
+def get_request_msg(target_download_url: str, request_type="GET", custom_header=""):
     msg = f'{request_type} /{target_download_url[target_download_url.find("/"):]} HTTP/1.1\r\nHost:%s\r\n\r\n' % target_download_url[
                                                                                                                  :target_download_url.find(
                                                                                                                      "/")]
@@ -155,6 +153,9 @@ def get_request_msg(target_download_url: str, request_type="GET", custom_header=
         msg += '\r\n'
     return msg
 
+def createNewDownloadThread(link, data_capacity_of_each_thread):
+    download_thread = threading.Thread(target=create_connection, args=(link,data_capacity_of_each_thread))
+    download_thread.start()
 
 print('Program has been started ...')
 
@@ -163,7 +164,7 @@ arguments = arguments[1:]
 range_is_given = False
 
 target_url = arguments[0]
-connection_counter = arguments[1]
+thread_counter = arguments[1]
 
 print(f"URL of the index file: {target_url}")
 file_name = target_url[target_url.rfind("/") + 1:]
@@ -202,7 +203,17 @@ except:
 
 print(f"There are {len(url_list)} files in the index. ")
 
-threads = []
+# threads = []
+
+"""
+ n :  the number of bytes in the file.
+ k :  the number of connections. 
+ 
+if n is divisible by k, 
+    The number of bytes downloaded through each connection is  n/k
+Otherwise, ((n/k)+1) bytes should be downloaded through the first (n−(n/k)*k) connections 
+    and ⌊n/k⌋ bytes should be downloaded through the remaining connections.
+"""
 for x in url_list:
     # Head request in order to check file existence.
     internal_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -217,14 +228,32 @@ for x in url_list:
         print(f"{x}  not found...")
     else:
         file_size = get_size_of_file(x)
-        if file_size == -1:
-            print("File size is -1 system is going to exit.")
+        if file_size % thread_counter == 0:
+            data_capacity_of_each_thread = file_size / thread_counter
+            last_readed_byte = 0
+            for x in range(thread_counter):
+                createNewDownloadThread( x, last_readed_byte,data_capacity_of_each_thread)
+                last_readed_byte += data_capacity_of_each_thread
+
+            # Read data from a file in a multithreaded way.
+            # t = threading.Thread(target=create_connection, args=[x, file_size])
+            # t.start()
+            # threads.append(t)
+            # for thread in threads:
+            #     thread.join()
         else:
-            t = threading.Thread(target=create_connection, args=[x, file_size])
-            t.start()
-            threads.append(t)
-            for thread in threads:
-                thread.join()
+            last_readed_byte = 0
+            # As default downloader for each thread
+            data_capacity_of_each_thread = 1
+
+            for x in range(thread_counter):
+                if x < file_size - ((file_size / thread_counter) * thread_counter):
+                    data_capacity_of_each_thread = file_size / thread_counter + 1
+                else:
+                    data_capacity_of_each_thread = file_size / thread_counter
+                createNewDownloadThread(x, last_readed_byte, data_capacity_of_each_thread)
+                last_readed_byte += data_capacity_of_each_thread
+
 
 
 s.close()
