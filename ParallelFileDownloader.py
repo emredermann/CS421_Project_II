@@ -1,12 +1,11 @@
 """
 Authors:
 Emre Derman
-Idil Yılmaz
 -----------------
 Bilkent University
 CS 421 - Network Course
-Programming Assignment 1
-Subject : Socket Programming
+Programming Assignment 2
+Subject : Parallel File Downloader
 """
 
 import socket
