@@ -156,7 +156,7 @@ for x in url_list:
     response_internal = response_internal.decode()
     splitted = response_internal.split("\r")
     if splitted[0] == ('HTTP/1.1 404 Not Found'):
-        print(f" {x} not found. ")
+        print(f"{str(counter)}. {x} not found. ")
     else:
         last_read_byte = 0
         upper_limit = 0
