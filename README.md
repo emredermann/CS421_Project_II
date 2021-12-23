@@ -4,4 +4,4 @@ This program is supposed to download an index file to obtain a list of text file
 
 ## Example execution
 #### python .\ParallelFileDownloader.py www.cs.bilkent.edu.tr/~cs421/fall21/project1/index2.txt 5
-##### python .\ParallelFileDownloader.py <url> <thread number>
+#### python .\ParallelFileDownloader.py \<url> \<thread number>
