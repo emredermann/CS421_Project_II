@@ -89,16 +89,12 @@ def createNewDownloadThread(link, data_capacity_of_each_thread,last_read_byte):
     download_thread = threading.Thread(target=create_connection, args=(link,data_capacity_of_each_thread,last_read_byte,upper_limit))
     download_thread.start()
 
-print('Program has been started ...')
-
 arguments = sys.argv
 arguments = arguments[1:]
 range_is_given = False
 
 target_url = arguments[0]
 thread_counter = int(arguments[1])
-
-print(f"URL of the index file: {target_url}")
 file_name = target_url[target_url.rfind("/") + 1:]
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -110,13 +106,10 @@ BUFFER_SIZE = 100000
 # Connect to the server
 s.connect((server_hostIP, server_port))
 
-print(f'Connected to {server_hostIP} on {server_port} port.')
-
 # Make a GET request
 # Get  and save it to
-
+print(f"URL of the index file: {target_url} \nNumber of parallel connections: {thread_counter}\nIndex file is downloaded.")
 msg = get_request_msg(target_url, request_type="GET")
-print('Sending request...')
 try:
     s.sendall(msg.encode())
     response = s.recv(BUFFER_SIZE)
@@ -162,25 +155,31 @@ for x in url_list:
         file_size = get_size_of_file(x)
         global result
         result = f"{str(counter)}. {x} (size = {file_size}) is downloaded \n File parts: "
-        if file_size % thread_counter == 0:
-            data_capacity_of_each_thread = file_size / thread_counter
-            for y in range(thread_counter):
-                last_read_byte += int(data_capacity_of_each_thread)
-                createNewDownloadThread(x, data_capacity_of_each_thread,last_read_byte)
-                result += f"{int(last_read_byte - data_capacity_of_each_thread)}:{int(last_read_byte)}({int(data_capacity_of_each_thread)})  "
-                # create_connection(x,last_read_byte,data_capacity_of_each_thread)
+        if(file_size == -1):
+            result = f"{str(counter)}. {x} (size = {0}) is downloaded."
+            createNewDownloadThread(x, 1, 1)
         else:
-            # As default downloader for each thread
-            data_capacity_of_each_thread = 1
-            for y in range(thread_counter):
-                if y < thread_counter - 1:
-                    data_capacity_of_each_thread = file_size / thread_counter + 1
-                else:
-                    data_capacity_of_each_thread = file_size / thread_counter
-                last_read_byte += int(data_capacity_of_each_thread)
-                createNewDownloadThread(x, int(data_capacity_of_each_thread),last_read_byte)
-                result += f"{int(last_read_byte-data_capacity_of_each_thread)}:{int(last_read_byte)}({int(data_capacity_of_each_thread)})  "
+            if file_size % thread_counter == 0:
+                data_capacity_of_each_thread = file_size / thread_counter
+                for y in range(thread_counter):
+                    last_read_byte += int(data_capacity_of_each_thread)
+                    createNewDownloadThread(x, data_capacity_of_each_thread,last_read_byte)
+                    result += f"{int(last_read_byte - data_capacity_of_each_thread)}:{int(last_read_byte)}({int(data_capacity_of_each_thread)})  "
+                    # create_connection(x,last_read_byte,data_capacity_of_each_thread)
+            else:
+                # As default downloader for each thread
+                data_capacity_of_each_thread = 1
+                calculation = int(file_size / thread_counter)
+                next_step_calculation = calculation * thread_counter
+                result_calculation = file_size - next_step_calculation
+                for y in range(thread_counter):
+                    if y < result_calculation:
+                        data_capacity_of_each_thread = file_size / thread_counter + 1
+                    else:
+                        data_capacity_of_each_thread = file_size / thread_counter
+                    last_read_byte += int(data_capacity_of_each_thread)
+                    createNewDownloadThread(x, int(data_capacity_of_each_thread),last_read_byte)
+                    result += f"{int(last_read_byte-data_capacity_of_each_thread)}:{int(last_read_byte)}({int(data_capacity_of_each_thread)})  "
         print(result)
     counter += 1
 s.close()
-print('Connection was closed.')
