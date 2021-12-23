@@ -72,9 +72,6 @@ def create_connection(url,data_capacity_of_each_thread,last_read_byte,upper_limi
     resp = internal_socket.recv(BUFFER_SIZE)
     with open(url[url.rfind('/') + 1:], 'wb') as file:
         file.write(resp)
-    global result
-    result += ("["+str(int(last_read_byte)) + " : "+str(int(upper_limit)) +"]" + f"({data_capacity_of_each_thread})")
-    print(result)
     last_read_byte += data_capacity_of_each_thread
     internal_socket.close()
 
@@ -159,17 +156,19 @@ for x in url_list:
     response_internal = response_internal.decode()
     splitted = response_internal.split("\r")
     if splitted[0] == ('HTTP/1.1 404 Not Found'):
-        print(f"{str(counter)}. {x} not found. ")
+        print(f" {x} not found. ")
     else:
-        print(f"{str(counter)}. {x}")
         last_read_byte = 0
         upper_limit = 0
         file_size = get_size_of_file(x)
-        result = f"File is {x}."
+        global result
+        result = f"{str(counter)}. {x} (size = {file_size}) is downloaded \n File parts: "
         if file_size % thread_counter == 0:
             data_capacity_of_each_thread = file_size / thread_counter
             for y in range(thread_counter):
+                last_read_byte += int(data_capacity_of_each_thread)
                 createNewDownloadThread(x, data_capacity_of_each_thread,last_read_byte)
+                result += f"{int(last_read_byte - data_capacity_of_each_thread)}:{int(last_read_byte)}({int(data_capacity_of_each_thread)})  "
                 # create_connection(x,last_read_byte,data_capacity_of_each_thread)
         else:
             # As default downloader for each thread
@@ -179,13 +178,10 @@ for x in url_list:
                     data_capacity_of_each_thread = file_size / thread_counter + 1
                 else:
                     data_capacity_of_each_thread = file_size / thread_counter
-                last_read_byte += data_capacity_of_each_thread
+                last_read_byte += int(data_capacity_of_each_thread)
                 createNewDownloadThread(x, int(data_capacity_of_each_thread),last_read_byte)
+                result += f"{int(last_read_byte-data_capacity_of_each_thread)}:{int(last_read_byte)}({int(data_capacity_of_each_thread)})  "
         print(result)
-                # create_connection(x,last_read_byte,data_capacity_of_each_thread)
     counter += 1
-
-
-
 s.close()
 print('Connection was closed.')
