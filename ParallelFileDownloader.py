@@ -13,8 +13,6 @@ import socket
 import sys
 import threading
 
-global last_read_byte
-global upper_limit
 
 
 def get_size_of_file(url):
@@ -69,13 +67,14 @@ def create_connection(url,data_capacity_of_each_thread,last_read_byte,upper_limi
     internal_socket.connect((server_hostIP, server_port))
     # In order to decide the bounds of the connection.
     range_header = f"Range: bytes = {last_read_byte}-{upper_limit}"
-
     msg = get_request_msg(url, request_type="GET", custom_header=range_header)
     internal_socket.sendall(msg.encode())
     resp = internal_socket.recv(BUFFER_SIZE)
     with open(url[url.rfind('/') + 1:], 'wb') as file:
         file.write(resp)
-    print(str(last_read_byte)+" - "+str(upper_limit) + f"is downloaded from file {url}.")
+    global result
+    result += ("["+str(int(last_read_byte)) + " : "+str(int(upper_limit)) +"]" + f"({data_capacity_of_each_thread})")
+    print(result)
     last_read_byte += data_capacity_of_each_thread
     internal_socket.close()
 
@@ -89,6 +88,7 @@ def get_request_msg(target_download_url: str, request_type="GET", custom_header=
     return msg
 
 def createNewDownloadThread(link, data_capacity_of_each_thread,last_read_byte):
+    global upper_limit
     upper_limit = last_read_byte + data_capacity_of_each_thread
     download_thread = threading.Thread(target=create_connection, args=(link,data_capacity_of_each_thread,last_read_byte,upper_limit))
     download_thread.start()
@@ -162,26 +162,26 @@ for x in url_list:
         print(f"{str(counter)}. {x} not found. ")
     else:
         print(f"{str(counter)}. {x}")
-
-        file_size = get_size_of_file(x)
         last_read_byte = 0
         upper_limit = 0
+        file_size = get_size_of_file(x)
+        result = f"File is {x}."
         if file_size % thread_counter == 0:
             data_capacity_of_each_thread = file_size / thread_counter
             for y in range(thread_counter):
                 createNewDownloadThread(x, data_capacity_of_each_thread,last_read_byte)
                 # create_connection(x,last_read_byte,data_capacity_of_each_thread)
-
         else:
             # As default downloader for each thread
             data_capacity_of_each_thread = 1
             for y in range(thread_counter):
-                if y < file_size - ((file_size / thread_counter) * thread_counter):
+                if y < thread_counter - 1:
                     data_capacity_of_each_thread = file_size / thread_counter + 1
                 else:
                     data_capacity_of_each_thread = file_size / thread_counter
                 last_read_byte += data_capacity_of_each_thread
-                createNewDownloadThread(x, data_capacity_of_each_thread,last_read_byte)
+                createNewDownloadThread(x, int(data_capacity_of_each_thread),last_read_byte)
+        print(result)
                 # create_connection(x,last_read_byte,data_capacity_of_each_thread)
     counter += 1
 
