@@ -13,10 +13,7 @@ import socket
 import sys
 import threading
 
-
-
-
-global last_readed_byte
+global last_read_byte
 global upper_limit
 
 
@@ -66,20 +63,20 @@ def get_size_of_file(url):
         return -1
 
 
-def create_connection(url,data_capacity_of_each_thread):
+def create_connection(url,data_capacity_of_each_thread,last_read_byte,upper_limit):
     internal_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_hostIP = socket.gethostbyname(url[:url.find("/")])
     internal_socket.connect((server_hostIP, server_port))
     # In order to decide the bounds of the connection.
-    upper_limit = last_readed_byte + data_capacity_of_each_thread
-    range_header = f"Range: bytes = {last_readed_byte}-{upper_limit}"
-    last_readed_byte += data_capacity_of_each_thread
+    range_header = f"Range: bytes = {last_read_byte}-{upper_limit}"
+
     msg = get_request_msg(url, request_type="GET", custom_header=range_header)
     internal_socket.sendall(msg.encode())
     resp = internal_socket.recv(BUFFER_SIZE)
     with open(url[url.rfind('/') + 1:], 'wb') as file:
         file.write(resp)
-    print(str(last_readed_byte)+" - "+str(upper_limit) + "is downloaded.")
+    print(str(last_read_byte)+" - "+str(upper_limit) + f"is downloaded from file {url}.")
+    last_read_byte += data_capacity_of_each_thread
     internal_socket.close()
 
 def get_request_msg(target_download_url: str, request_type="GET", custom_header=""):
@@ -91,8 +88,9 @@ def get_request_msg(target_download_url: str, request_type="GET", custom_header=
         msg += '\r\n'
     return msg
 
-def createNewDownloadThread(link, data_capacity_of_each_thread):
-    download_thread = threading.Thread(target=create_connection, args=(link,data_capacity_of_each_thread))
+def createNewDownloadThread(link, data_capacity_of_each_thread,last_read_byte):
+    upper_limit = last_read_byte + data_capacity_of_each_thread
+    download_thread = threading.Thread(target=create_connection, args=(link,data_capacity_of_each_thread,last_read_byte,upper_limit))
     download_thread.start()
 
 print('Program has been started ...')
@@ -149,6 +147,7 @@ if n is divisible by k,
 Otherwise, ((n/k)+1) bytes should be downloaded through the first (n−(n/k)*k) connections 
     and ⌊n/k⌋ bytes should be downloaded through the remaining connections.
 """
+counter = 1
 for x in url_list:
     # Head request in order to check file existence.
     internal_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -160,17 +159,18 @@ for x in url_list:
     response_internal = response_internal.decode()
     splitted = response_internal.split("\r")
     if splitted[0] == ('HTTP/1.1 404 Not Found'):
-        print(f"{x}  not found...")
+        print(f"{str(counter)}. {x} not found. ")
     else:
-        print(x)
+        print(f"{str(counter)}. {x}")
+
         file_size = get_size_of_file(x)
-        last_readed_byte = 0
+        last_read_byte = 0
         upper_limit = 0
         if file_size % thread_counter == 0:
             data_capacity_of_each_thread = file_size / thread_counter
             for y in range(thread_counter):
-                createNewDownloadThread( x, data_capacity_of_each_thread)
-                # create_connection(x,last_readed_byte,data_capacity_of_each_thread)
+                createNewDownloadThread(x, data_capacity_of_each_thread,last_read_byte)
+                # create_connection(x,last_read_byte,data_capacity_of_each_thread)
 
         else:
             # As default downloader for each thread
@@ -180,9 +180,10 @@ for x in url_list:
                     data_capacity_of_each_thread = file_size / thread_counter + 1
                 else:
                     data_capacity_of_each_thread = file_size / thread_counter
-                createNewDownloadThread(x, data_capacity_of_each_thread)
-                # create_connection(x,last_readed_byte,data_capacity_of_each_thread)
-
+                last_read_byte += data_capacity_of_each_thread
+                createNewDownloadThread(x, data_capacity_of_each_thread,last_read_byte)
+                # create_connection(x,last_read_byte,data_capacity_of_each_thread)
+    counter += 1
 
 
 
